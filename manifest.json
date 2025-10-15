@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "九工大Moodle 文字数カウンター",
+    "name": "九工大Moodle文字数カウンター",
     "version": "1.0",
     "description": "九工大Moodleのテキストエディタに、文字数をカウントするカウンターを表示します。",
     "content_scripts": [
@@ -13,4 +13,5 @@
         "48": "icon48.png"
     }
 }
+
 
