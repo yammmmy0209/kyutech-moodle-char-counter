@@ -3,7 +3,8 @@
 この拡張機能は現在Chromeウェブストアで公開されていないため、以下の手順で手動でインストールしてください。
 
 1.  **リリースページからzipファイルをダウンロード**
-    * [最新のリリース](https://github.com/yammmmy0209/kyutech-moodle-char-counter/release/latest)にアクセスし、`extension.zip`のような名前のzipファイルをダウンロードします。
+    * [最新のリリース](https://github.com/yammmmy0209/kyutech-moodle-char-counter/release/latest)にアクセスし、`moodle-char-count.zip
+`という名前のzipファイルをダウンロードします。
     * ダウンロードしたzipファイルを解凍（展開）します。
 
 2.  **Chromeで拡張機能ページを開く**
@@ -17,4 +18,5 @@
     * ファイル選択ダイアログが表示されたら、ステップ1で**解凍したフォルダ**を選択します。
 
 5.  **インストール完了**
+
     * 拡張機能が一覧に表示されればインストールは完了です。
