@@ -1,11 +1,13 @@
 {
     "manifest_version": 3,
-    "name": "九工大Moodle文字数カウンター",
-    "version": "1.0",
-    "description": "九工大Moodleのテキストエディタに、文字数をカウントするカウンターを表示します。",
+    "name": "Moodle文字数カウンター",
+    "version": "1.1",
+    "description": "Moodleのテキストエディタに、文字数をカウントするカウンターを表示します。/n(動作確認済み:九州工業大学)",
     "content_scripts": [
         {
-            "matches": ["https://*.el.kyutech.ac.jp/*"],
+            "matches": ["https://*.el.kyutech.ac.jp/*",
+                "https://moodle.s.kyushu-u.ac.jp/*"
+            ],
             "js": ["content.js"]
         }
     ],
@@ -13,5 +15,6 @@
         "48": "icon48.png"
     }
 }
+
 
 
