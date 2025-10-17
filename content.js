@@ -1,15 +1,29 @@
 (function () {
     "use strict";
 
-    // カウンターを設置するコア機能
+    /**
+     * カウンターを設置するコア機能
+     * @param {HTMLElement} targetEditor - 対象のテキストボックス（divまたはtextarea）
+     */
     const setupCounter = (targetEditor) => {
-        const container = targetEditor.closest(".form-group, body"); // エディタを囲む枠か、iframeのbodyを探す
-        if (!container || container.dataset.charCounterInitialized) {
+        //すでにカウンターが設置済みなら何もしない
+        if (targetEditor.dataset.charCounterInitialized) {
             return;
         }
-        container.dataset.charCounterInitialized = "true";
+
+        if (targetEditor.tagName === 'TEXTAREA') {
+            const parentContainer = targetEditor.closest('.form-group');
+            if (parentContainer && parentContainer.querySelector('div[role="textbox"]')) {
+                // 親コンテナ内にリッチエディタ(div[role="textbox"])が既にある場合、このtextareaは「隠れた裏方」なので、カウンターを付けずに処理を終了する
+                return;
+            }
+        }
+
+        // 設置済みフラグを立てる
+        targetEditor.dataset.charCounterInitialized = "true";
 
         const counter = document.createElement("div");
+        counter.style.width = "100%";
         counter.style.textAlign = "right";
         counter.style.fontSize = "0.9em";
         counter.style.color = "#555";
@@ -17,11 +31,20 @@
 
         targetEditor.parentElement.appendChild(counter);
 
+        // 文字数をカウントして更新する
         const updateCounter = () => {
-            const count = targetEditor.innerText.replace(
-                /\r\n|\r/g,
-                "\n",
-            ).length;
+            let count = 0;
+            let textContent = "";
+            if (targetEditor.tagName === "TEXTAREA") {
+                // プレーンテキストエディタの場合
+                textContent = targetEditor.value;
+            } else {
+                // リッチテキストエディタの場合
+                textContent = targetEditor.innerText;
+            }
+            let normalizedText = textContent.replace(/\r\n|\r/g, "\n");
+            let textWithoutNewlines = normalizedText.replace(/\n/g, "");
+            count = textWithoutNewlines.length;
             counter.textContent = `現在の文字数: ${count}`;
         };
 
@@ -30,37 +53,37 @@
         updateCounter();
     };
 
-    // 監視対象のドキュメントでエディタを探す関数
+    /**
+     * 監視対象のドキュメントでエディタを探す関数
+     * @param {Document} doc - 検索対象のドキュメント
+     */
     const findEditor = (doc) => {
-        // Moodleの標準的なリッチテキストエディタのセレクタ
-        const editor = doc.querySelector('div[role="textbox"]');
-        if (editor) {
-            setupCounter(editor);
-        }
+        doc.querySelectorAll('div[role="textbox"], textarea').forEach(
+            (editor) => {
+                setupCounter(editor);
+            },
+        );
     };
 
-    // メインの実行関数
+    /**
+     * メインの実行関数
+     */
     const main = () => {
-        // まず、現在のドキュメントでエディタを探す
-        findEditor(document);
+        findEditor(document); // まず現在のドキュメントで探す
 
-        // 監視を開始
+        // ページ全体の変更を監視
         const observer = new MutationObserver((mutations) => {
-            // ページに何かが追加されたら、エディタがいないか再度探す
-            findEditor(document);
+            findEditor(document); // 動的な変更でも探す
 
-            // もしiframeが追加されたら、その中も監視対象にする
+            // iframeの処理
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.tagName === "IFRAME") {
-                        // iframeが完全に読み込まれるのを待つ
                         node.addEventListener("load", () => {
                             try {
-                                // iframeの中のdocumentを取得して、そこでもエディタを探す
                                 const iframeDoc = node.contentDocument;
                                 if (iframeDoc) {
                                     findEditor(iframeDoc);
-                                    // iframeの中も監視する
                                     const iframeObserver = new MutationObserver(
                                         () => findEditor(iframeDoc),
                                     );
@@ -84,6 +107,5 @@
         observer.observe(document.body, {childList: true, subtree: true});
     };
 
-    // 実行
     main();
 })();
