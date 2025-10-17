@@ -6,20 +6,9 @@
      * @param {HTMLElement} targetEditor - 対象のテキストボックス（divまたはtextarea）
      */
     const setupCounter = (targetEditor) => {
-        //すでにカウンターが設置済みなら何もしない
         if (targetEditor.dataset.charCounterInitialized) {
             return;
         }
-
-        if (targetEditor.tagName === 'TEXTAREA') {
-            const parentContainer = targetEditor.closest('.form-group');
-            if (parentContainer && parentContainer.querySelector('div[role="textbox"]')) {
-                // 親コンテナ内にリッチエディタ(div[role="textbox"])が既にある場合、このtextareaは「隠れた裏方」なので、カウンターを付けずに処理を終了する
-                return;
-            }
-        }
-
-        // 設置済みフラグを立てる
         targetEditor.dataset.charCounterInitialized = "true";
 
         const counter = document.createElement("div");
@@ -31,20 +20,19 @@
 
         targetEditor.parentElement.appendChild(counter);
 
-        // 文字数をカウントして更新する
         const updateCounter = () => {
             let count = 0;
             let textContent = "";
             if (targetEditor.tagName === "TEXTAREA") {
-                // プレーンテキストエディタの場合
                 textContent = targetEditor.value;
             } else {
-                // リッチテキストエディタの場合
                 textContent = targetEditor.innerText;
             }
+
             let normalizedText = textContent.replace(/\r\n|\r/g, "\n");
             let textWithoutNewlines = normalizedText.replace(/\n/g, "");
             count = textWithoutNewlines.length;
+
             counter.textContent = `現在の文字数: ${count}`;
         };
 
@@ -58,16 +46,19 @@
      * @param {Document} doc - 検索対象のドキュメント
      */
     const findEditor = (doc) => {
-        doc.querySelectorAll('div[role="textbox"], textarea').forEach(
-            (editor) => {
-                setupCounter(editor);
-            },
-        );
+        doc.querySelectorAll('div[role="textbox"]').forEach((div) => {
+            setupCounter(div);
+        });
+
+        doc.querySelectorAll("textarea").forEach((area) => {
+            if (area.offsetParent !== null) {
+                //これは「表示されている」プレーンテキストエディタなので、カウンターを設置
+                setupCounter(area);
+            }
+            // (offsetParentがnullのtextareaは、リッチエディタの裏方か非表示のフォームの一部なので、無視する)
+        });
     };
 
-    /**
-     * メインの実行関数
-     */
     const main = () => {
         findEditor(document); // まず現在のドキュメントで探す
 
