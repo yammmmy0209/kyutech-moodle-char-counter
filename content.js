@@ -1,16 +1,7 @@
 (function () {
     "use strict";
 
-    /**
-     * カウンターを設置するコア機能
-     * @param {HTMLElement} targetEditor - 対象のテキストボックス（divまたはtextarea）
-     */
-    const setupCounter = (targetEditor) => {
-        if (targetEditor.dataset.charCounterInitialized) {
-            return;
-        }
-        targetEditor.dataset.charCounterInitialized = "true";
-
+    const createCounter = (targetElement, getCountCallback) => {
         const counter = document.createElement("div");
         counter.style.width = "100%";
         counter.style.textAlign = "right";
@@ -18,55 +9,136 @@
         counter.style.color = "#555";
         counter.style.marginTop = "5px";
 
-        targetEditor.parentElement.appendChild(counter);
+        // エディタの親要素にカウンターを追加
+        targetElement.parentElement.appendChild(counter);
 
+        // カウントを更新する内部関数
         const updateCounter = () => {
-            let count = 0;
-            let textContent = "";
-            if (targetEditor.tagName === "TEXTAREA") {
-                textContent = targetEditor.value;
-            } else {
-                textContent = targetEditor.innerText;
-            }
-
+            const textContent = getCountCallback();
             let normalizedText = textContent.replace(/\r\n|\r/g, "\n");
             let textWithoutNewlines = normalizedText.replace(/\n/g, "");
-            count = textWithoutNewlines.length;
-
+            let count = textWithoutNewlines.length;
             counter.textContent = `現在の文字数: ${count}`;
         };
 
-        targetEditor.addEventListener("input", updateCounter);
-        targetEditor.addEventListener("keyup", updateCounter);
+        return updateCounter;
+    };
+
+    /**
+     * @param {HTMLElement} div - The <div role="textbox"> element
+     */
+    const setupAttoCounter = (div) => {
+        if (div.dataset.charCounterInitialized) return;
+        div.dataset.charCounterInitialized = "true";
+
+        const getCount = () => div.innerText;
+        const updateCounter = createCounter(div, getCount);
+
+        div.addEventListener("input", updateCounter);
+        div.addEventListener("keyup", updateCounter);
         updateCounter();
     };
 
     /**
-     * 監視対象のドキュメントでエディタを探す関数
-     * @param {Document} doc - 検索対象のドキュメント
+     * @param {HTMLElement} area - The <textarea> element
      */
-    const findEditor = (doc) => {
-        doc.querySelectorAll('div[role="textbox"]').forEach((div) => {
-            setupCounter(div);
-        });
+    const setupTextareaCounter = (area) => {
+        if (area.dataset.charCounterInitialized) return;
 
-        doc.querySelectorAll("textarea").forEach((area) => {
-            if (area.offsetParent !== null) {
-                //これは「表示されている」プレーンテキストエディタなので、カウンターを設置
-                setupCounter(area);
+        // 「非表示」のtextarea（リッチエディタの裏方）は無視する
+        if (area.offsetParent === null) {
+            return;
+        }
+
+        area.dataset.charCounterInitialized = "true";
+
+        const getCount = () => area.value;
+        const updateCounter = createCounter(area, getCount);
+
+        area.addEventListener("input", updateCounter);
+        area.addEventListener("keyup", updateCounter);
+        updateCounter();
+    };
+
+    /**
+     * @param {HTMLElement} container - The <div role="application"> container
+     */
+    const setupTinyMCECounter = (container) => {
+        if (container.dataset.charCounterInitialized) return;
+        container.dataset.charCounterInitialized = "true";
+
+        let intervalId;
+        const findIframeBody = () => {
+            try {
+                // 発見したセレクタでiframe内のbodyを探す
+                const editArea = container.querySelector(".tox-edit-area");
+                if (!editArea) return; // まだ準備中
+
+                const iframe = editArea.querySelector("iframe");
+                if (!iframe) return; // まだ準備中
+
+                const iframeDoc = iframe.contentDocument;
+                if (!iframeDoc) return; // まだ準備中
+
+                const richTextDiv = iframeDoc.querySelector("html body");
+                if (!richTextDiv) return; // まだ準備中
+
+                // --- 成功 ---
+                // 編集エリアを発見したので、ポーリングを停止
+                clearInterval(intervalId);
+
+                // カウンターを作成・設置
+                const getCount = () => richTextDiv.innerText;
+                const counter = document.createElement("div");
+                counter.style.width = "100%";
+                counter.style.textAlign = "right";
+                counter.style.fontSize = "0.9em";
+                counter.style.color = "#555";
+                counter.style.marginTop = "5px";
+
+                // カウンターはiframeの外側、エディタの大枠コンテナに追加
+                container.appendChild(counter);
+
+                const updateCounter = () => {
+                    const textContent = getCount();
+                    let normalizedText = textContent.replace(/\r\n|\r/g, "\n");
+                    let textWithoutNewlines = normalizedText.replace(/\n/g, "");
+                    let count = textWithoutNewlines.length;
+                    counter.textContent = `現在の文字数: ${count}`;
+                };
+
+                richTextDiv.addEventListener("input", updateCounter);
+                richTextDiv.addEventListener("keyup", updateCounter);
+                updateCounter();
+            } catch (e) {
+                // エラーが発生しても、次のポーリングまで待機
+                console.log("Moodle Counter: TinyMCEのiframeをポーリング中...");
             }
-            // (offsetParentがnullのtextareaは、リッチエディタの裏方か非表示のフォームの一部なので、無視する)
-        });
+        };
+
+        // 1秒ごとにiframe内のbodyを探しに行くポーリングを開始
+        intervalId = setInterval(findIframeBody, 1000);
+    };
+
+    /**
+     * ページ内の全エディタタイプを検索してセットアップする
+     * @param {Document} doc - The document (or iframe document) to search
+     */
+    const findEditors = (doc) => {
+        doc.querySelectorAll('div[role="textbox"]').forEach(setupAttoCounter);
+        doc.querySelectorAll("textarea").forEach(setupTextareaCounter);
+        doc.querySelectorAll('div[role="application"]').forEach(
+            setupTinyMCECounter,
+        );
     };
 
     const main = () => {
-        findEditor(document); // まず現在のドキュメントで探す
+        findEditors(document);
 
-        // ページ全体の変更を監視
+        // ページが動的に変化したかを監視
         const observer = new MutationObserver((mutations) => {
-            findEditor(document); // 動的な変更でも探す
+            findEditors(document);
 
-            // iframeの処理
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.tagName === "IFRAME") {
@@ -74,9 +146,9 @@
                             try {
                                 const iframeDoc = node.contentDocument;
                                 if (iframeDoc) {
-                                    findEditor(iframeDoc);
+                                    findEditors(iframeDoc);
                                     const iframeObserver = new MutationObserver(
-                                        () => findEditor(iframeDoc),
+                                        () => findEditors(iframeDoc),
                                     );
                                     iframeObserver.observe(iframeDoc.body, {
                                         childList: true,
@@ -85,7 +157,7 @@
                                 }
                             } catch (e) {
                                 console.log(
-                                    "クロスオリジンのiframeにはアクセスできませんでした。",
+                                    "Moodle Counter: iframeにアクセスできませんでした。",
                                     e,
                                 );
                             }
