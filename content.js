@@ -9,10 +9,8 @@
         counter.style.color = "#555";
         counter.style.marginTop = "5px";
 
-        // エディタの親要素にカウンターを追加
         targetElement.parentElement.appendChild(counter);
 
-        // カウントを更新する内部関数
         const updateCounter = () => {
             const textContent = getCountCallback();
             let normalizedText = textContent.replace(/\r\n|\r/g, "\n");
@@ -24,9 +22,7 @@
         return updateCounter;
     };
 
-    /**
-     * @param {HTMLElement} div - The <div role="textbox"> element
-     */
+    // Attoエディタ (標準リッチテキスト)
     const setupAttoCounter = (div) => {
         if (div.dataset.charCounterInitialized) return;
         div.dataset.charCounterInitialized = "true";
@@ -39,14 +35,11 @@
         updateCounter();
     };
 
-    /**
-     * @param {HTMLElement} area - The <textarea> element
-     */
+    // プレーンテキストエディタ
     const setupTextareaCounter = (area) => {
         if (area.dataset.charCounterInitialized) return;
 
-        // 「非表示」のtextarea（リッチエディタの裏方）は無視する
-        if (area.offsetParent === null) {
+        if (area.offsetWidth === 0 && area.offsetHeight === 0) {
             return;
         }
 
@@ -60,9 +53,7 @@
         updateCounter();
     };
 
-    /**
-     * @param {HTMLElement} container - The <div role="application"> container
-     */
+    // TinyMCEエディタ
     const setupTinyMCECounter = (container) => {
         if (container.dataset.charCounterInitialized) return;
         container.dataset.charCounterInitialized = "true";
@@ -70,24 +61,22 @@
         let intervalId;
         const findIframeBody = () => {
             try {
-                // 発見したセレクタでiframe内のbodyを探す
                 const editArea = container.querySelector(".tox-edit-area");
-                if (!editArea) return; // まだ準備中
+                if (!editArea) return;
 
                 const iframe = editArea.querySelector("iframe");
-                if (!iframe) return; // まだ準備中
+                if (!iframe) return;
 
                 const iframeDoc = iframe.contentDocument;
-                if (!iframeDoc) return; // まだ準備中
+                if (!iframeDoc) return;
 
                 const richTextDiv = iframeDoc.querySelector("html body");
-                if (!richTextDiv) return; // まだ準備中
+                if (!richTextDiv) return;
 
                 // --- 成功 ---
-                // 編集エリアを発見したので、ポーリングを停止
                 clearInterval(intervalId);
 
-                // カウンターを作成・設置
+                // カウンターを作成・設置 (TinyMCEはコンテナの末尾に追加)
                 const getCount = () => richTextDiv.innerText;
                 const counter = document.createElement("div");
                 counter.style.width = "100%";
@@ -96,7 +85,6 @@
                 counter.style.color = "#555";
                 counter.style.marginTop = "5px";
 
-                // カウンターはiframeの外側、エディタの大枠コンテナに追加
                 container.appendChild(counter);
 
                 const updateCounter = () => {
@@ -112,18 +100,13 @@
                 updateCounter();
             } catch (e) {
                 // エラーが発生しても、次のポーリングまで待機
-                console.log("Moodle Counter: TinyMCEのiframeをポーリング中...");
+                console.log('Moodle Counter: TinyMCEのiframeをポーリング中...');
             }
         };
 
-        // 1秒ごとにiframe内のbodyを探しに行くポーリングを開始
         intervalId = setInterval(findIframeBody, 1000);
     };
 
-    /**
-     * ページ内の全エディタタイプを検索してセットアップする
-     * @param {Document} doc - The document (or iframe document) to search
-     */
     const findEditors = (doc) => {
         doc.querySelectorAll('div[role="textbox"]').forEach(setupAttoCounter);
         doc.querySelectorAll("textarea").forEach(setupTextareaCounter);
@@ -135,7 +118,6 @@
     const main = () => {
         findEditors(document);
 
-        // ページが動的に変化したかを監視
         const observer = new MutationObserver((mutations) => {
             findEditors(document);
 
@@ -156,10 +138,7 @@
                                     });
                                 }
                             } catch (e) {
-                                console.log(
-                                    "Moodle Counter: iframeにアクセスできませんでした。",
-                                    e,
-                                );
+                                console.log('Moodle Counter: iframeにアクセスできませんでした。', e);
                             }
                         });
                     }

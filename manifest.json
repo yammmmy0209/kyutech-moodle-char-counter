@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Moodle文字数カウンター",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "Moodleのテキストエディタに、文字数をカウントするカウンターを表示します。(動作確認済み:九州工業大学)",
     "content_scripts": [
         {
