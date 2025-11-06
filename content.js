@@ -1,5 +1,17 @@
 (function () {
-    "use strict";
+    ("use strict");
+
+    /**
+     * @param {HTMLElement} elem
+     */
+    const isVisible = (elem) => {
+        if (!elem) return false;
+        return !!(
+            elem.offsetWidth ||
+            elem.offsetHeight ||
+            elem.getClientRects().length
+        );
+    };
 
     const createCounter = (targetElement, getCountCallback) => {
         const counter = document.createElement("div");
@@ -39,7 +51,7 @@
     const setupTextareaCounter = (area) => {
         if (area.dataset.charCounterInitialized) return;
 
-        if (area.offsetWidth === 0 && area.offsetHeight === 0) {
+        if (!isVisible(area)) {
             return;
         }
 
@@ -100,7 +112,7 @@
                 updateCounter();
             } catch (e) {
                 // エラーが発生しても、次のポーリングまで待機
-                console.log('Moodle Counter: TinyMCEのiframeをポーリング中...');
+                console.log("Moodle Counter: TinyMCEのiframeをポーリング中...");
             }
         };
 
@@ -138,7 +150,10 @@
                                     });
                                 }
                             } catch (e) {
-                                console.log('Moodle Counter: iframeにアクセスできませんでした。', e);
+                                console.log(
+                                    "Moodle Counter: iframeにアクセスできませんでした。",
+                                    e,
+                                );
                             }
                         });
                     }
